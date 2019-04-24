@@ -6,8 +6,10 @@
 #include <QVector3D>
 #include <QKeyEvent>
 #include <QDebug>
+#include <QOpenGLFunctions_4_1_Core>
+#include <QOpenGLShaderProgram>
 
-class MyGLWidget : public QOpenGLWidget{
+class MyGLWidget : public QOpenGLWidget, QOpenGLFunctions_4_1_Core{
     Q_OBJECT
     private:
         int m_FOV;
@@ -19,6 +21,10 @@ class MyGLWidget : public QOpenGLWidget{
         int m_RotationB;
         int m_RotationC;
         QVector3D m_CameraPos;
+
+        QOpenGLShaderProgram* mp_program;
+        GLuint m_vbo;
+        GLuint m_vao;
 
 
     public:
@@ -41,6 +47,12 @@ class MyGLWidget : public QOpenGLWidget{
         void farValueChanged(int value);
         void nearValueChanged(int value);
 
+
+        // QOpenGLWidget interface
+protected:
+        void initializeGL();
+        void resizeGL(int w, int h);
+        void paintGL();
 };
 
 #endif // MYGLWIDGET_H
