@@ -124,6 +124,9 @@ void MyGLWidget::initializeGL() {
         {{0.0, 0.5},{0.0f, 0.0f, 1.0f}}
     };
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glGenVertexArrays(1, &m_vao); //m_vao um elemente in m_vbo richtig zu unterteilen
     glBindVertexArray(m_vao);
 
@@ -142,6 +145,7 @@ void MyGLWidget::initializeGL() {
     #undef OFS
 
     mp_program = new QOpenGLShaderProgram();
+    // mp_program->setUniformValue(1, 0.2f);
     mp_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/default.vert");
     mp_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/default.frag");
     mp_program->link();
@@ -152,10 +156,12 @@ void MyGLWidget::resizeGL(int w, int h) {
 }
 
 void MyGLWidget::paintGL() {
+    mp_program->setUniformValue(99, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     glBindVertexArray(m_vao);
     mp_program->bind();
+
 
     glDrawArrays(GL_TRIANGLES, 0, 3);
 

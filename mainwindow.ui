@@ -80,7 +80,7 @@
              <item>
               <widget class="QSpinBox" name="sbAngle">
                <property name="maximum">
-                <number>180</number>
+                <number>360</number>
                </property>
               </widget>
              </item>
