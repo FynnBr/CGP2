@@ -42,6 +42,10 @@ void MyGLWidget::setRotationA(int value) {
 
 void MyGLWidget::setRotationB(int value) {
     m_RotationB = value;
+    mp_programC->bind();
+    uAlpha = (float)value/100;
+    mp_programC->setUniformValue(0,uAlpha);
+    this->update();
 }
 
 void MyGLWidget::setRotationC(int value) {
@@ -111,33 +115,18 @@ void MyGLWidget::initializeGL() {
     Q_ASSERT(initializeOpenGLFunctions());
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
-/* OLD
-    GLfloat vert[] = { // vertices of triangle
-       -0.5, -0.5,
-        0.5, -0.5,
-        0.0, 0.5
-    };
 
-    glGenVertexArrays(1, &m_vao); //m_vao um elemente in m_vbo richtig zu unterteilen
-    glBindVertexArray(m_vao);
-
-    glGenBuffers(1, &m_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vert), vert, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*2, (void*)0);
-*/
     struct Vertex {
         QVector2D position;
         QVector3D color;
         QVector2D texture;
     };
 
-    Vertex vert[3] = {
-        {{-0.5, -0.5},{1.0f, 0.0f, 0.0f}, {0.25, 0.25}},
-        {{0.5, -0.5},{0.0f, 1.0f, 0.0f}, {0.75, 0.25}},
-        {{0.0, 0.5},{0.0f, 0.0f, 1.0f}, {0.5, 0.75}}
+    Vertex vert[4] = {
+        {{0.0,  0.5}, {1.0f, 0.0f, 0.0f}, {0.5, 0.75}},
+        {{-0.5, -0.5}, {0.0f, 1.0f, 0.0f}, {0.25, 0.25}},
+        {{0.5, -0.5}, {0.0f, 0.0f, 1.0f}, {0.75, 0.25}},
+        {{1,  0.5}, {0.0f, 0.0f, 1.0f}, {0.25, 0.25}}
     };
 
     glEnable(GL_BLEND);
@@ -150,13 +139,21 @@ void MyGLWidget::initializeGL() {
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vert), vert, GL_STATIC_DRAW);
 
+    GLuint data[] = { 0, 1, 2, 0, 2, 3}; // which vert to share
+    glGenBuffers(1, &m_ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
+
     #define OFS(s,a) reinterpret_cast<void* const>(offsetof(s,a))
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, position));
 
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, texture));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, color));
+
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, texture));
 
     #undef OFS
 
@@ -174,8 +171,12 @@ void MyGLWidget::initializeGL() {
     mp_program = new QOpenGLShaderProgram();
     mp_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/default.vert");
     mp_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/default.frag");
-    mp_program->link();
-    Q_ASSERT(mp_program->isLinked());
+    Q_ASSERT(mp_program->link());
+
+    mp_programC = new QOpenGLShaderProgram();
+    mp_programC->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/default.vert");
+    mp_programC->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/color.frag");
+    Q_ASSERT(mp_programC->link());
 }
 
 void MyGLWidget::resizeGL(int w, int h) {
@@ -186,27 +187,43 @@ void MyGLWidget::paintGL() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     glBindVertexArray(m_vao);
-    mp_program->bind();
-
+    void* const offset = reinterpret_cast<void* const>(sizeof(GLuint)*3);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_tex);
+    mp_programC->setUniformValue(0, uAlpha); //uAlpha
+
+    mp_programC->bind();
 
     /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);*/
 
-    /*mp_program->setUniformValue(0, 1);
+    /*
     mp_program->setUniformValue(1, 1);
     mp_program->setUniformValue(2, TextureMod);*/
 
-    mp_program->setUniformValue(1, 0);
+    //mp_program->setUniformValue(1, 0);
 
 
     // mp_program->setUniformValue(0, uAlpha);
 
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, nullptr);
+    mp_programC->release();
+    // glDrawArrays(GL_TRIANGLES, 0, 3);
     //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
+    mp_program->bind();
+     mp_program->setUniformValue(1, TextureMod);
+    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, offset);
     mp_program->release();
+
     glBindVertexArray(0);
+}
+
+void MyGLWidget::finalize() {
+    glDeleteBuffers(1, &m_vbo);
+    glDeleteBuffers(1, &m_ibo);
+    glDeleteVertexArrays(1, &m_vao);
+    glDeleteTextures(1, &m_tex);
+    delete mp_program;
 }
 

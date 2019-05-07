@@ -25,8 +25,10 @@ class MyGLWidget : public QOpenGLWidget, QOpenGLFunctions_4_4_Core{
         float TextureMod;
         GLuint m_tex;
         QImage img;
+        GLuint m_ibo;
 
         QOpenGLShaderProgram* mp_program;
+        QOpenGLShaderProgram* mp_programC;
         GLuint m_vbo;
         GLuint m_vao;
 
@@ -58,6 +60,7 @@ protected:
         void initializeGL();
         void resizeGL(int w, int h);
         void paintGL();
+        void finalize();
 };
 
 #endif // MYGLWIDGET_H
