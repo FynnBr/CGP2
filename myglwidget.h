@@ -6,10 +6,10 @@
 #include <QVector3D>
 #include <QKeyEvent>
 #include <QDebug>
-#include <QOpenGLFunctions_4_1_Core>
+#include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLShaderProgram>
 
-class MyGLWidget : public QOpenGLWidget, QOpenGLFunctions_4_1_Core{
+class MyGLWidget : public QOpenGLWidget, QOpenGLFunctions_4_4_Core{
     Q_OBJECT
     private:
         int m_FOV;
@@ -21,6 +21,10 @@ class MyGLWidget : public QOpenGLWidget, QOpenGLFunctions_4_1_Core{
         int m_RotationB;
         int m_RotationC;
         QVector3D m_CameraPos;
+        GLfloat uAlpha;
+        float TextureMod;
+        GLuint m_tex;
+        QImage img;
 
         QOpenGLShaderProgram* mp_program;
         GLuint m_vbo;
@@ -42,6 +46,7 @@ class MyGLWidget : public QOpenGLWidget, QOpenGLFunctions_4_1_Core{
         void setRotationA(int value);
         void setRotationB(int value);
         void setRotationC(int value);
+        void moveTexture(int value);
 
     signals:
         void farValueChanged(int value);

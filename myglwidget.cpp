@@ -29,7 +29,15 @@ void MyGLWidget::setProjectionMode() {
 }
 
 void MyGLWidget::setRotationA(int value) {
-    m_RotationA = value;
+    //m_RotationA = value;
+    /*uAlpha = 1.0f-(float)value/100;
+    mp_program->setUniformValue(0,uAlpha);
+    this->update();*/
+    mp_program->bind();
+    TextureMod = (float)(value/100.0);
+    mp_program->setUniformValue(2, TextureMod);
+    this->update();
+    qInfo() << TextureMod;
 }
 
 void MyGLWidget::setRotationB(int value) {
@@ -90,6 +98,13 @@ void MyGLWidget::keyPressEvent(QKeyEvent *event) {
     }
 }
 
+void MyGLWidget::moveTexture(int value){
+    TextureMod = (float)value/100;
+    mp_program->setUniformValue(2, TextureMod);
+    this->update();
+}
+
+
 //destructor -->
 
 void MyGLWidget::initializeGL() {
@@ -116,12 +131,13 @@ void MyGLWidget::initializeGL() {
     struct Vertex {
         QVector2D position;
         QVector3D color;
+        QVector2D texture;
     };
 
     Vertex vert[3] = {
-        {{-0.5, -0.5},{1.0f, 0.0f, 0.0f}},
-        {{0.5, -0.5},{0.0f, 1.0f, 0.0f}},
-        {{0.0, 0.5},{0.0f, 0.0f, 1.0f}}
+        {{-0.5, -0.5},{1.0f, 0.0f, 0.0f}, {0.25, 0.25}},
+        {{0.5, -0.5},{0.0f, 1.0f, 0.0f}, {0.75, 0.25}},
+        {{0.0, 0.5},{0.0f, 0.0f, 1.0f}, {0.5, 0.75}}
     };
 
     glEnable(GL_BLEND);
@@ -137,18 +153,29 @@ void MyGLWidget::initializeGL() {
     #define OFS(s,a) reinterpret_cast<void* const>(offsetof(s,a))
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,2,GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, position));
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, position));
 
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, color));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, texture));
 
     #undef OFS
 
+    img.load(":/sample_texture.jpg");
+    Q_ASSERT(!img.isNull());
+
+    glGenTextures(1, &m_tex);
+    glBindTexture(GL_TEXTURE_2D, m_tex);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, img.width(), img.height(), 0, GL_BGRA, GL_UNSIGNED_BYTE, img.bits());
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     mp_program = new QOpenGLShaderProgram();
-    // mp_program->setUniformValue(1, 0.2f);
     mp_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/default.vert");
     mp_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/default.frag");
     mp_program->link();
+    Q_ASSERT(mp_program->isLinked());
 }
 
 void MyGLWidget::resizeGL(int w, int h) {
@@ -156,14 +183,28 @@ void MyGLWidget::resizeGL(int w, int h) {
 }
 
 void MyGLWidget::paintGL() {
-    mp_program->setUniformValue(99, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     glBindVertexArray(m_vao);
     mp_program->bind();
 
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_tex);
+
+    /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);*/
+
+    /*mp_program->setUniformValue(0, 1);
+    mp_program->setUniformValue(1, 1);
+    mp_program->setUniformValue(2, TextureMod);*/
+
+    mp_program->setUniformValue(1, 0);
+
+
+    // mp_program->setUniformValue(0, uAlpha);
 
     glDrawArrays(GL_TRIANGLES, 0, 3);
+    //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
     mp_program->release();
     glBindVertexArray(0);
