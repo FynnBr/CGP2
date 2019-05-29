@@ -48,7 +48,7 @@ class MyGLWidget : public QOpenGLWidget, QOpenGLFunctions_4_4_Core{
         void setRotationA(int value);
         void setRotationB(int value);
         void setRotationC(int value);
-        void moveTexture(int value);
+        //void moveTexture(int value);
 
     signals:
         void farValueChanged(int value);

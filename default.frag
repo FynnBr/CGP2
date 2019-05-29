@@ -4,7 +4,7 @@
 
 layout(location = 0) in vec2 uvCoordinates;
 layout(location = 0) out vec4 fragColor;
-layout(location = 0) uniform sampler2D tex0;
+layout(location = 2) uniform sampler2D tex0;
 layout(location = 1) uniform float uMove;
 
 void main() {

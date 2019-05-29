@@ -29,10 +29,6 @@ void MyGLWidget::setProjectionMode() {
 }
 
 void MyGLWidget::setRotationA(int value) {
-    //m_RotationA = value;
-    /*uAlpha = 1.0f-(float)value/100;
-    mp_program->setUniformValue(0,uAlpha);
-    this->update();*/
     mp_program->bind();
     TextureMod = (float)(value/100.0);
     mp_program->setUniformValue(2, TextureMod);
@@ -102,15 +98,19 @@ void MyGLWidget::keyPressEvent(QKeyEvent *event) {
     }
 }
 
-void MyGLWidget::moveTexture(int value){
+/*void MyGLWidget::moveTexture(int value){
     TextureMod = (float)value/100;
     mp_program->setUniformValue(2, TextureMod);
     this->update();
-}
+}*/
 
 
 //destructor -->
 
+//Initialize:
+//Zustände werden eingestellt, die über die Dauer der Applikation erhalten bleiben, sowie
+//Resourcen alloziert und ggfs. mit Daten initialisiert.
+//Wird einmal aufgerufen.
 void MyGLWidget::initializeGL() {
     Q_ASSERT(initializeOpenGLFunctions());
 
@@ -123,31 +123,37 @@ void MyGLWidget::initializeGL() {
     };
 
     Vertex vert[4] = {
-        {{0.0,  0.5}, {1.0f, 0.0f, 0.0f}, {0.5, 0.75}},
-        {{-0.5, -0.5}, {0.0f, 1.0f, 0.0f}, {0.25, 0.25}},
-        {{0.5, -0.5}, {0.0f, 0.0f, 1.0f}, {0.75, 0.25}},
-        {{1,  0.5}, {0.0f, 0.0f, 1.0f}, {0.25, 0.25}}
+        {{0.0,  0.5}, {1.0f, 0.0f, 0.0f}, {0.5, 0.75}}, // O
+        {{-0.5, -0.5}, {0.0f, 1.0f, 0.0f}, {0.25, 0.25}}, // LU
+        {{0.5, -0.5}, {0.0f, 0.0f, 1.0f}, {0.75, 0.25}}, //RU
+        {{1,  0.5}, {0.0f, 0.0f, 1.0f}, {0, 0}} //Punkt für zweites Dreieck
     };
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glGenVertexArrays(1, &m_vao); //m_vao um elemente in m_vbo richtig zu unterteilen
-    glBindVertexArray(m_vao);
+    //vbo vertex buffer object: Speicher auf den CPU und GPU zugreifen können. CPU setzt rein, GPU hat Zugriff drauf und berechnet jeden Pixel
+    //vao vertex array object: meta data, über die Objekte im Buffer
+    //ibo index buffer object: Punkte werden gebuffert, damit man sie nicht jedes Mal neu laden muss
 
-    glGenBuffers(1, &m_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vert), vert, GL_STATIC_DRAW);
+    glGenVertexArrays(1, &m_vao); // meta daten für Objekte im Buffer festlegen
+    glBindVertexArray(m_vao); // vao als aktiv setzen
 
-    GLuint data[] = { 0, 1, 2, 0, 2, 3}; // which vert to share
-    glGenBuffers(1, &m_ibo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
+    glGenBuffers(1, &m_vbo); //vbo generieren
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo); // buffer object wird gebindet
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vert), vert, GL_STATIC_DRAW); //buffer Daten übergeben: sizeof(vert) -> Menge an Daten; vert -> Daten, die übergeben werden
 
-    #define OFS(s,a) reinterpret_cast<void* const>(offsetof(s,a))
+    GLuint data[] = { 0, 1, 2, 0, 2, 3}; // vertices für Dreiecke auswählen
+    glGenBuffers(1, &m_ibo); // Buffer generieren mit vertices
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo); // buffer bind
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW); // Daten übergeben
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, position));
+    #define OFS(s,a) reinterpret_cast<void* const>(offsetof(s,a)) // define offset
+    //offset: Abstand von Start
+    //stride: Schrittweite bis zum nächsten gleichen Datensatz
+
+    glEnableVertexAttribArray(0); // auf verschiedene Stellen Daten schreiben (layout in für vert)
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, position)); //index, size, type, normalized, stride, pointer(Offset)
 
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, color));
@@ -160,10 +166,10 @@ void MyGLWidget::initializeGL() {
     img.load(":/sample_texture.jpg");
     Q_ASSERT(!img.isNull());
 
-    glGenTextures(1, &m_tex);
-    glBindTexture(GL_TEXTURE_2D, m_tex);
+    glGenTextures(1, &m_tex); // generiere texture
+    glBindTexture(GL_TEXTURE_2D, m_tex); //bind texture
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, img.width(), img.height(), 0, GL_BGRA, GL_UNSIGNED_BYTE, img.bits());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, img.width(), img.height(), 0, GL_BGRA, GL_UNSIGNED_BYTE, img.bits()); // Textur wird in bits zerlegt
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -183,42 +189,33 @@ void MyGLWidget::resizeGL(int w, int h) {
 
 }
 
+//Rendering der aktuellen Szene
+//Resourcen und Zustandsinformationen werden verwendet, um die aktuelle Szene neu zu zeichnen.
+//Wird in der Regel 60 mal pro Sekunde aufgerufen.
 void MyGLWidget::paintGL() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     glBindVertexArray(m_vao);
-    void* const offset = reinterpret_cast<void* const>(sizeof(GLuint)*3);
-    glActiveTexture(GL_TEXTURE0);
+    void* const offset = reinterpret_cast<void* const>(sizeof(GLuint)*3); //offset setzen
+    glActiveTexture(GL_TEXTURE0); // GL Texture auf location 0
     glBindTexture(GL_TEXTURE_2D, m_tex);
-    mp_programC->setUniformValue(0, uAlpha); //uAlpha
+    mp_programC->setUniformValue(0, uAlpha); //Alpha per uniform übergeben
 
     mp_programC->bind();
-
-    /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);*/
-
-    /*
-    mp_program->setUniformValue(1, 1);
-    mp_program->setUniformValue(2, TextureMod);*/
-
-    //mp_program->setUniformValue(1, 0);
-
-
-    // mp_program->setUniformValue(0, uAlpha);
-
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, nullptr);
     mp_programC->release();
-    // glDrawArrays(GL_TRIANGLES, 0, 3);
-    //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
     mp_program->bind();
-     mp_program->setUniformValue(1, TextureMod);
+     mp_program->setUniformValue(1, TextureMod); // verschiebung per uniform übergeben
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, offset);
     mp_program->release();
 
-    glBindVertexArray(0);
+    glBindVertexArray(0); //muss auf 0 gebindet werden, da es sonst nicht neu gebindet werden kann
 }
 
+//Finalisierung
+//Resourcen werden freigegeben, bevor die Applikation beendet wird.
+//Wird einmal aufgerufen
 void MyGLWidget::finalize() {
     glDeleteBuffers(1, &m_vbo);
     glDeleteBuffers(1, &m_ibo);
