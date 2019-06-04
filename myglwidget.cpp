@@ -152,6 +152,7 @@ void MyGLWidget::initializeGL() {
     //offset: Abstand von Start
     //stride: Schrittweite bis zum nächsten gleichen Datensatz
 
+    //vbo befüllen
     glEnableVertexAttribArray(0); // auf verschiedene Stellen Daten schreiben (layout in für vert)
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), OFS(Vertex, position)); //index, size, type, normalized, stride, pointer(Offset)
 
@@ -169,10 +170,16 @@ void MyGLWidget::initializeGL() {
     glGenTextures(1, &m_tex); // generiere texture
     glBindTexture(GL_TEXTURE_2D, m_tex); //bind texture
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, img.width(), img.height(), 0, GL_BGRA, GL_UNSIGNED_BYTE, img.bits()); // Textur wird in bits zerlegt
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, img.width(), img.height(), 0, GL_BGRA, GL_UNSIGNED_BYTE, img.bits()); // Textur wird mit pixeldata befüllt
 
+    // filtering ( interpolation ) options
+    // damit sampling nicht nur schwarz angezeigt wird
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // set wrap mode to "clamp to edge"
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     mp_program = new QOpenGLShaderProgram();
     mp_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/default.vert");
